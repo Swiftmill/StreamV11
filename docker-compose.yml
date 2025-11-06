@@ -1,0 +1,12 @@
+version: '3.9'
+services:
+  streamv11:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      COOKIE_SECRET: super-secure-cookie
+    volumes:
+      - ./data:/app/data
+    command: ['node', 'server.js']
