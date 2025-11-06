@@ -1,0 +1,114 @@
+{
+  "slug": "money-heist",
+  "title": "Money Heist",
+  "synopsis": "The Professor leads the greatest heist ever conceived.",
+  "genres": ["Thriller", "Drama"],
+  "posterUrl": "https://storage.googleapis.com/streamv11/posters/money-heist.jpg",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "published": true,
+  "featured": true,
+  "views": 0,
+  "seasons": [
+    {
+      "season": 1,
+      "episodes": [
+        {
+          "season": 1,
+          "episode": 1,
+          "title": "Money Heist - Épisode 11",
+          "synopsis": "Money Heist saison 1 épisode 1.",
+          "duration": 50,
+          "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
+            }
+          ],
+          "releaseDate": "2024-01-01T00:00:00.000Z"
+        },
+        {
+          "season": 1,
+          "episode": 2,
+          "title": "Money Heist - Épisode 12",
+          "synopsis": "Money Heist saison 1 épisode 2.",
+          "duration": 50,
+          "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
+            }
+          ],
+          "releaseDate": "2024-01-02T00:00:00.000Z"
+        },
+        {
+          "season": 1,
+          "episode": 3,
+          "title": "Money Heist - Épisode 13",
+          "synopsis": "Money Heist saison 1 épisode 3.",
+          "duration": 50,
+          "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
+            }
+          ],
+          "releaseDate": "2024-01-03T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "season": 2,
+      "episodes": [
+        {
+          "season": 2,
+          "episode": 1,
+          "title": "Money Heist - Épisode 21",
+          "synopsis": "Money Heist saison 2 épisode 1.",
+          "duration": 50,
+          "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
+            }
+          ],
+          "releaseDate": "2024-02-01T00:00:00.000Z"
+        },
+        {
+          "season": 2,
+          "episode": 2,
+          "title": "Money Heist - Épisode 22",
+          "synopsis": "Money Heist saison 2 épisode 2.",
+          "duration": 50,
+          "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
+            }
+          ],
+          "releaseDate": "2024-02-02T00:00:00.000Z"
+        },
+        {
+          "season": 2,
+          "episode": 3,
+          "title": "Money Heist - Épisode 23",
+          "synopsis": "Money Heist saison 2 épisode 3.",
+          "duration": 50,
+          "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
+            }
+          ],
+          "releaseDate": "2024-02-03T00:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}
