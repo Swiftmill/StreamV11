@@ -2,7 +2,10 @@
   "slug": "money-heist",
   "title": "Money Heist",
   "synopsis": "The Professor leads the greatest heist ever conceived.",
-  "genres": ["Thriller", "Drama"],
+  "genres": [
+    "Thriller",
+    "Drama"
+  ],
   "posterUrl": "https://storage.googleapis.com/streamv11/posters/money-heist.jpg",
   "createdAt": "2024-01-01T00:00:00.000Z",
   "updatedAt": "2024-01-01T00:00:00.000Z",
@@ -26,7 +29,7 @@
               "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
             }
           ],
-          "releaseDate": "2024-01-01T00:00:00.000Z"
+          "releaseDate": "2023-12-31T23:00:00.000Z"
         },
         {
           "season": 1,
@@ -41,7 +44,7 @@
               "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
             }
           ],
-          "releaseDate": "2024-01-02T00:00:00.000Z"
+          "releaseDate": "2024-01-01T23:00:00.000Z"
         },
         {
           "season": 1,
@@ -56,7 +59,7 @@
               "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
             }
           ],
-          "releaseDate": "2024-01-03T00:00:00.000Z"
+          "releaseDate": "2024-01-02T23:00:00.000Z"
         }
       ]
     },
@@ -76,7 +79,7 @@
               "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
             }
           ],
-          "releaseDate": "2024-02-01T00:00:00.000Z"
+          "releaseDate": "2024-01-31T23:00:00.000Z"
         },
         {
           "season": 2,
@@ -91,7 +94,7 @@
               "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
             }
           ],
-          "releaseDate": "2024-02-02T00:00:00.000Z"
+          "releaseDate": "2024-02-01T23:00:00.000Z"
         },
         {
           "season": 2,
@@ -106,7 +109,7 @@
               "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one/subtitles/fra.vtt"
             }
           ],
-          "releaseDate": "2024-02-03T00:00:00.000Z"
+          "releaseDate": "2024-02-02T23:00:00.000Z"
         }
       ]
     }

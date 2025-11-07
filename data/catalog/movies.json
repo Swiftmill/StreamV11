@@ -6,7 +6,10 @@
       "description": "A mob hitman recalls his possible involvement with the slaying of Jimmy Hoffa.",
       "releaseYear": 2019,
       "duration": 209,
-      "genres": ["Crime", "Drama"],
+      "genres": [
+        "Crime",
+        "Drama"
+      ],
       "rating": "R",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/the-irishman.jpg",
       "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
@@ -17,10 +20,10 @@
         }
       ],
       "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2025-11-07T15:37:47.515Z",
       "published": true,
       "featured": true,
-      "views": 0
+      "views": 2
     },
     {
       "id": "roma",
@@ -28,7 +31,9 @@
       "description": "Cleo, a domestic worker, helps her employer Sofía raise four children in 1970s Mexico City.",
       "releaseYear": 2018,
       "duration": 135,
-      "genres": ["Drama"],
+      "genres": [
+        "Drama"
+      ],
       "rating": "PG-13",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/roma.jpg",
       "streamUrl": "https://bitmovin-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
@@ -39,10 +44,10 @@
         }
       ],
       "createdAt": "2024-01-02T00:00:00.000Z",
-      "updatedAt": "2024-01-02T00:00:00.000Z",
+      "updatedAt": "2025-11-07T15:37:53.282Z",
       "published": true,
       "featured": false,
-      "views": 0
+      "views": 2
     },
     {
       "id": "bird-box",
@@ -50,7 +55,9 @@
       "description": "A mysterious force decimates the population, only one thing is certain: if you see it, you die.",
       "releaseYear": 2018,
       "duration": 124,
-      "genres": ["Thriller"],
+      "genres": [
+        "Thriller"
+      ],
       "rating": "R",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/bird-box.jpg",
       "streamUrl": "https://test-streams.mux.dev/playlist.m3u8",
@@ -72,7 +79,10 @@
       "description": "A young girl risks everything to prevent a powerful company from abducting her best friend.",
       "releaseYear": 2017,
       "duration": 120,
-      "genres": ["Adventure", "Drama"],
+      "genres": [
+        "Adventure",
+        "Drama"
+      ],
       "rating": "PG-13",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/okja.jpg",
       "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
@@ -94,7 +104,9 @@
       "description": "A stage director and an actor struggle through a grueling divorce that pushes them to their limits.",
       "releaseYear": 2019,
       "duration": 137,
-      "genres": ["Drama"],
+      "genres": [
+        "Drama"
+      ],
       "rating": "R",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/marriage-story.jpg",
       "streamUrl": "https://bitmovin-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
@@ -116,7 +128,10 @@
       "description": "Four African American vets battle the forces of man and nature when they return to Vietnam.",
       "releaseYear": 2020,
       "duration": 154,
-      "genres": ["War", "Drama"],
+      "genres": [
+        "War",
+        "Drama"
+      ],
       "rating": "R",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/da-5-bloods.jpg",
       "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
@@ -138,7 +153,10 @@
       "description": "A fearless black market mercenary embarks on the deadliest extraction of his career.",
       "releaseYear": 2020,
       "duration": 117,
-      "genres": ["Action", "Thriller"],
+      "genres": [
+        "Action",
+        "Thriller"
+      ],
       "rating": "R",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/extraction.jpg",
       "streamUrl": "https://test-streams.mux.dev/playlist.m3u8",
@@ -149,10 +167,10 @@
         }
       ],
       "createdAt": "2024-01-07T00:00:00.000Z",
-      "updatedAt": "2024-01-07T00:00:00.000Z",
+      "updatedAt": "2025-11-07T15:37:35.723Z",
       "published": true,
       "featured": false,
-      "views": 0
+      "views": 1
     },
     {
       "id": "the-old-guard",
@@ -160,7 +178,10 @@
       "description": "A covert group of tight-knit mercenaries with a mysterious inability to die have protected the mortal world for centuries.",
       "releaseYear": 2020,
       "duration": 125,
-      "genres": ["Action", "Fantasy"],
+      "genres": [
+        "Action",
+        "Fantasy"
+      ],
       "rating": "R",
       "posterUrl": "https://storage.googleapis.com/streamv11/posters/the-old-guard.jpg",
       "streamUrl": "https://bitmovin-a.akamaihd.net/content/sintel/hls/playlist.m3u8",

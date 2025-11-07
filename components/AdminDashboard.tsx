@@ -25,6 +25,26 @@ function slugify(value: string) {
     .replace(/(^-|-$)+/g, '');
 }
 
+/** Parse "fr:https://.../fr.vtt" (lignes ou virgules). Coupe au 1er ":" uniquement. */
+function parseSubtitlesInput(input: string) {
+  return (input || '')
+    .split(/\r?\n|,/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      const idx = s.indexOf(':'); // <-- clé: premier “:”
+      if (idx <= 0) {
+        throw new Error('Sous-titre invalide. Format attendu: fr:https://... (une entrée par ligne ou séparée par des virgules)');
+      }
+      const lang = s.slice(0, idx).trim();
+      const url = s.slice(idx + 1).trim();
+      if (!/^https?:\/\//i.test(url)) {
+        throw new Error('URL de sous-titre invalide. Utilise une URL absolue (https://...)');
+      }
+      return { lang, url };
+    });
+}
+
 export function AdminDashboard() {
   const { data: session } = useSession();
   const { data: categories, mutate: mutateCategories } = useCategories();
@@ -85,14 +105,8 @@ export function AdminDashboard() {
         rating: DOMPurify.sanitize(movieForm.rating),
         posterUrl: movieForm.posterUrl,
         streamUrl: movieForm.streamUrl,
-        subtitles: movieForm.subtitles
-          .split(',')
-          .map(pair => pair.trim())
-          .filter(Boolean)
-          .map(entry => {
-            const [lang, url] = entry.split(':');
-            return { lang: DOMPurify.sanitize(lang), url: url?.trim() ?? '' };
-          }),
+        // 🔧 FIX: parser correctement les sous-titres
+        subtitles: parseSubtitlesInput(movieForm.subtitles),
         createdAt: now,
         updatedAt: now,
         published: true,
@@ -101,9 +115,9 @@ export function AdminDashboard() {
       };
       await createMovie(movie, csrfToken);
       await mutateMovies();
-      setMessage(`Film ${movie.title} créé.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la création du film');
+      setMessage(`Film ${movie.title} créé ✅`);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de la création du film');
     }
   }
 
@@ -123,9 +137,9 @@ export function AdminDashboard() {
       };
       await createCategory(category, csrfToken);
       await mutateCategories();
-      setMessage(`Catégorie ${category.name} créée.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la création de la catégorie');
+      setMessage(`Catégorie ${category.name} créée ✅`);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de la création de la catégorie');
     }
   }
 
@@ -144,14 +158,8 @@ export function AdminDashboard() {
           synopsis: DOMPurify.sanitize(episodeForm.synopsis),
           duration: Number(episodeForm.duration),
           streamUrl: episodeForm.streamUrl,
-          subtitles: episodeForm.subtitles
-            .split(',')
-            .map(value => value.trim())
-            .filter(Boolean)
-            .map(value => {
-              const [lang, url] = value.split(':');
-              return { lang: DOMPurify.sanitize(lang), url: url?.trim() ?? '' };
-            }),
+          // 🔧 FIX: parser correctement les sous-titres
+          subtitles: parseSubtitlesInput(episodeForm.subtitles),
           releaseDate: episodeForm.releaseDate,
           seriesTitle: DOMPurify.sanitize(episodeForm.seriesTitle),
           seriesPosterUrl: episodeForm.seriesPosterUrl,
@@ -161,9 +169,9 @@ export function AdminDashboard() {
         csrfToken
       );
       await mutateSeries();
-      setMessage(`Épisode ${episodeForm.title} enregistré.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de l\'ajout de l\'épisode');
+      setMessage(`Épisode ${episodeForm.title} enregistré ✅`);
+    } catch (err: any) {
+      setError(err?.message || 'Erreur lors de l’ajout de l’épisode');
     }
   }
 
@@ -219,8 +227,8 @@ export function AdminDashboard() {
                   try {
                     await deleteCategory(category.id, csrfToken);
                     await mutateCategories();
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Impossible de supprimer la catégorie');
+                  } catch (err: any) {
+                    setError(err?.message || 'Impossible de supprimer la catégorie');
                   }
                 }}
                 style={{ background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', padding: '0.4rem 0.8rem', borderRadius: '999px' }}
@@ -261,8 +269,8 @@ export function AdminDashboard() {
                   try {
                     await deleteMovie(movie.id, csrfToken);
                     await mutateMovies();
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Impossible de supprimer le film');
+                  } catch (err: any) {
+                    setError(err?.message || 'Impossible de supprimer le film');
                   }
                 }}
                 style={{ background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', padding: '0.4rem 0.8rem', borderRadius: '999px' }}
@@ -304,8 +312,8 @@ export function AdminDashboard() {
                     try {
                       await deleteSeries(item.slug, csrfToken);
                       await mutateSeries();
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : 'Impossible de supprimer la série');
+                    } catch (err: any) {
+                      setError(err?.message || 'Impossible de supprimer la série');
                     }
                   }}
                   style={{ background: 'transparent', border: '1px solid #ff6b6b', color: '#ff6b6b', padding: '0.4rem 0.8rem', borderRadius: '999px' }}

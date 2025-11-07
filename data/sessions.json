@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": "15754c99-1569-44bc-9cdd-ad834a3af029",
+    "username": "admin",
+    "role": "admin",
+    "csrfToken": "c148e2e23efc477cbbf59f5f92c7cb991b8c648a9a9c2c3acc3a113d8d5529f6",
+    "expiresAt": 1763134157822
+  }
+]

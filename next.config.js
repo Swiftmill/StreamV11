@@ -5,16 +5,17 @@ const nextConfig = {
     typedRoutes: true
   },
   images: {
+    // autorise toutes les images externes
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'storage.googleapis.com'
-      },
-      {
-        protocol: 'https',
-        hostname: 'test-streams.mux.dev'
-      }
-    ]
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' }
+    ],
+    unoptimized: true // évite les erreurs d’optimisation
+  },
+  async rewrites() {
+    return [
+      { source: '/api/:path*', destination: 'http://localhost:3001/api/:path*' }
+    ];
   }
 };
 
