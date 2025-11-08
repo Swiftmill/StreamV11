@@ -1,0 +1,37 @@
+{
+  "slug": "mha",
+  "title": "My Hero Academia",
+  "synopsis": "Dans un monde où presque chaque humain naît avec un pouvoir appelé \"Alter\", les héros et les vilains s’affrontent pour la justice. Izuku Midoriya, né sans pouvoir, hérite du légendaire One For All et rejoint l’académie des héros U.A., où il découvre que devenir un héros, c’est d’abord apprendre à se relever après chaque chute.",
+  "genres": [
+    "Anime",
+    "Action"
+  ],
+  "posterUrl": "https://cdn-www.konbini.com/files/2024/10/feat-mha.jpg?width=3840&quality=75&format=webp",
+  "createdAt": "2025-11-07T16:29:13.741Z",
+  "updatedAt": "2025-11-07T16:31:20.372Z",
+  "published": true,
+  "featured": false,
+  "views": 1,
+  "seasons": [
+    {
+      "season": 7,
+      "episodes": [
+        {
+          "season": 7,
+          "episode": 1,
+          "title": "MHA EP1 S7",
+          "synopsis": "Dans un monde où la plupart des humains possèdent un pouvoir appelé Alter, les héros protègent la société face aux criminels qui en abusent. Izuku Midoriya, né sans pouvoir, rêve pourtant de devenir un héros. Sa vie change le jour où il rencontre son idole, All Might, le plus grand de tous, qui décide de lui transmettre son Alter légendaire : One For All.  À l’académie U.A., Izuku découvre la dure réalité du métier de héros : rivalités, sacrifices et combats où le courage ne suffit pas toujours. Pour devenir le symbole de la paix, il devra apprendre à se relever… encore et encore.",
+          "duration": 23,
+          "streamUrl": "https://cvn33-1.sibnet.ru/52/09/69/5209697.mp4?st=hAxo8q2ROcu6rfNb2x607Q&e=1762561000&stor=32&noip=1&cache=4",
+          "subtitles": [
+            {
+              "lang": "fr",
+              "url": "https://storage.googleapis.com/mon-bucket/subs/s1e1_fr.vtt"
+            }
+          ],
+          "releaseDate": "2025-11-07T16:27:24.330Z"
+        }
+      ]
+    }
+  ]
+}
