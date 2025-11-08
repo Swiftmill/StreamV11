@@ -13,8 +13,10 @@ const crypto = require('crypto');
 const lockfile = require('proper-lockfile');
 const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
+const nextjs = require('next');
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
+const DEV = process.env.NODE_ENV !== 'production';
+const PORT = Number(process.env.PORT || 3000); // un seul port pour API + Next
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'streamv11-cookie-secret';
 const SESSION_COOKIE = 'stream_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -34,29 +36,37 @@ const Role = { ADMIN: 'admin', USER: 'user' };
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1); // cookies Secure derrière proxy (Render/Fly/etc.)
 
-// Helmet
-app.use(helmet({
-  contentSecurityPolicy: {
-    useDefaults: true,
-    directives: {
-      "default-src": ["'self'"],
-      "img-src": ["'self'", "data:", "https:"],
-      "media-src": ["'self'", "https:"],
-      "script-src": ["'self'", "'unsafe-inline'"],
-      "style-src": ["'self'", "'unsafe-inline'"],
-      "connect-src": ["'self'", "https:"],
-      "frame-ancestors": ["'none'"]
-    }
-  },
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
-}));
+// Helmet (CSP compatible Next + HLS + dev websockets)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "img-src": ["'self'", "data:", "https:", "blob:"],
+        "media-src": ["'self'", "https:", "blob:"],
+        "script-src": DEV
+          ? ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"]
+          : ["'self'", "'unsafe-inline'", "blob:"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "connect-src": ["'self'", "https:", "ws:", "wss:"],
+        "worker-src": ["'self'", "blob:"],
+        "frame-ancestors": ["'none'"]
+      }
+    },
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
 
 // CORS (ouvert)
-app.use(cors({
-  origin: (_origin, cb) => cb(null, true),
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: (_origin, cb) => cb(null, true),
+    credentials: true
+  })
+);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser(COOKIE_SECRET));
@@ -91,7 +101,7 @@ const subtitleSchema = z.preprocess((val) => {
       const raw = val.slice(i + 1).trim();
       const url = /^https?:\/\//i.test(raw)
         ? raw
-        : `http://localhost:3000${raw.startsWith('/') ? '' : '/'}${raw}`;
+        : `http://localhost:${PORT}${raw.startsWith('/') ? '' : '/'}${raw}`;
       return { lang, url };
     }
   }
@@ -121,7 +131,7 @@ const movieSchema = z.object({
   genres: z.array(z.string().min(1)).min(1),
   rating: z.string().min(1),
   posterUrl: z.string().url(),
-  streamUrl: z.string().url(), // plus de whitelist
+  streamUrl: z.string().url(),
   subtitles: subtitlesField,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -136,7 +146,7 @@ const episodeSchema = z.object({
   title: z.string().min(1),
   synopsis: z.string().min(1),
   duration: z.number().int().positive(),
-  streamUrl: z.string().url(), // plus de whitelist
+  streamUrl: z.string().url(),
   subtitles: subtitlesField,
   releaseDate: z.string().datetime()
 });
@@ -400,6 +410,7 @@ async function registerView(req, res, type, contentId) {
       httpOnly: true,
       signed: true,
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 24 * 60 * 60 * 1000
     });
     if (type === 'movie') await incrementMovieViews(contentId);
@@ -417,7 +428,7 @@ function handleError(res, error) {
   return res.status(400).json({ error: error.message || 'Bad request' });
 }
 
-// ---------- ROUTES ----------
+// ---------- ROUTES API ----------
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
@@ -733,16 +744,26 @@ app.post('/api/history', requireAuth(), requireCsrf, async (req, res) => {
 // 404 API
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
-// Global error
-app.use((err, req, res, next) => res.status(500).json({ error: 'Internal server error' }));
+// ---------- INTÉGRATION NEXT.JS (après toutes les routes /api) ----------
+const nextApp = nextjs({ dev: DEV, dir: __dirname }); // App Router support
+const handle = nextApp.getRequestHandler();
 
 // BOOT
 (async () => {
   await ensureDirectories();
   await loadSessions();
+  await nextApp.prepare();
+
+  // (Optionnel) servir /data en lecture si tu en as besoin côté client
+  // app.use('/data', express.static(DATA_DIR, { fallthrough: true }));
+
+  // Next gère tout le reste
+  app.all('*', (req, res) => handle(req, res));
+
   app.listen(PORT, () => {
-    console.log(`[API] http://localhost:${PORT}`);
+    console.log(`✅ StreamV11 ready on http://localhost:${PORT}  (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
   });
 })();
 
+// Export pour tests éventuels
 module.exports = app;

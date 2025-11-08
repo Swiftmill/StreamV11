@@ -24,77 +24,83 @@ export function VideoPlayer({ source, onTimeUpdate, onEnded }: VideoPlayerProps)
   const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
-    const videoElement = videoRef.current;
-    if (!videoElement) {
-      return;
-    }
+    const video = videoRef.current;
+    if (!video) return;
 
-    function resetTracks() {
-      const tracks = videoElement.querySelectorAll('track');
-      tracks.forEach(track => track.remove());
-      const textTracks = videoElement.textTracks;
-      for (let i = textTracks.length - 1; i >= 0; i -= 1) {
-        textTracks[i].mode = 'disabled';
+    const resetTracks = (v: HTMLVideoElement) => {
+      Array.from(v.querySelectorAll('track')).forEach(t => t.remove());
+      const tt = v.textTracks;
+      for (let i = tt.length - 1; i >= 0; i--) {
+        try { tt[i].mode = 'disabled'; } catch {}
       }
-    }
+    };
 
-    videoElement.pause();
-    videoElement.removeAttribute('src');
-    videoElement.load();
-    resetTracks();
+    const destroyHls = () => {
+      if (hlsRef.current) {
+        try { hlsRef.current.destroy(); } catch {}
+        hlsRef.current = null;
+      }
+    };
 
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    try { video.pause(); } catch {}
+    video.removeAttribute('src');
+    video.load();
+    resetTracks(video);
+    destroyHls();
 
-    videoElement.poster = source.poster ?? '';
+    video.poster = source.poster ?? '';
 
     if (Hls.isSupported() && source.src.endsWith('.m3u8')) {
       const hls = new Hls({ enableWorker: false, backBufferLength: 90 });
       hlsRef.current = hls;
       hls.loadSource(source.src);
-      hls.attachMedia(videoElement);
+      hls.attachMedia(video);
     } else {
-      videoElement.src = source.src;
+      video.src = source.src;
     }
 
-    source.subtitles.forEach(subtitle => {
-      const track = document.createElement('track');
-      track.kind = 'subtitles';
-      track.label = subtitle.lang.toUpperCase();
-      track.srclang = subtitle.lang;
-      track.src = subtitle.url;
-      videoElement.appendChild(track);
-    });
-
-    videoElement.currentTime = source.startTime ?? 0;
-    videoElement.play().catch(() => undefined);
-
-    function handleTimeUpdate() {
-      if (!videoElement.duration || !onTimeUpdate) return;
-      onTimeUpdate(videoElement.currentTime, videoElement.duration);
+    if (Array.isArray(source.subtitles)) {
+      source.subtitles.forEach((s, i) => {
+        if (!s?.url || !s?.lang) return;
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        const label = s.lang.toUpperCase(); // pas de s.label dans ton type
+        track.label = label;
+        track.srclang = s.lang;
+        track.src = s.url;
+        if (i === 0) track.default = true;
+        video.appendChild(track);
+      });
     }
 
-    function handleEnded() {
-      videoElement.currentTime = 0;
+    if (typeof source.startTime === 'number' && source.startTime > 0) {
+      try { video.currentTime = source.startTime; } catch {}
+    }
+
+    const handleTimeUpdate = () => {
+      if (!onTimeUpdate) return;
+      const duration = video.duration || 0;
+      if (duration > 0) onTimeUpdate(video.currentTime, duration);
+    };
+
+    const handleEnded = () => {
+      try { video.currentTime = 0; } catch {}
       if (onEnded) onEnded();
-    }
+    };
 
-    videoElement.addEventListener('timeupdate', handleTimeUpdate);
-    videoElement.addEventListener('ended', handleEnded);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('ended', handleEnded);
+
+    video.play().catch(() => undefined);
 
     return () => {
-      videoElement.pause();
-      videoElement.removeAttribute('src');
-      videoElement.load();
-      resetTracks();
-      videoElement.removeEventListener('timeupdate', handleTimeUpdate);
-      videoElement.removeEventListener('ended', handleEnded);
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      try { video.pause(); } catch {}
+      video.removeAttribute('src');
+      video.load();
+      resetTracks(video);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('ended', handleEnded);
+      destroyHls();
     };
   }, [source, onTimeUpdate, onEnded]);
 

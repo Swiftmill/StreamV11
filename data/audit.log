@@ -40,3 +40,14 @@
 2025-11-07T16:36:03.459Z | admin | view_registered | movie:roma | Playback registered
 2025-11-07T16:36:03.971Z | admin | update_history | roma | {"contentId":"roma","type":"movie","progress":0.00020930968468468468,"lastWatched":"2025-11-07T16:36:03.965Z"}
 2025-11-07T16:36:09.019Z | admin | update_history | roma | {"contentId":"roma","type":"movie","progress":0.005893009009009009,"lastWatched":"2025-11-07T16:36:09.012Z"}
+2025-11-08T08:58:03.319Z | admin | view_registered | series:mha | Playback registered
+2025-11-08T08:58:11.936Z | admin | view_registered | series:mha | Playback registered
+2025-11-08T08:58:19.173Z | admin | view_registered | movie:the-irishman | Playback registered
+2025-11-08T08:58:19.179Z | admin | view_registered | movie:the-irishman | Playback registered
+2025-11-08T08:58:19.646Z | admin | update_history | the-irishman | {"contentId":"the-irishman","type":"movie","progress":0.00030771182380898355,"lastWatched":"2025-11-08T08:58:19.638Z"}
+2025-11-08T08:58:23.808Z | admin | view_registered | series:mha | Playback registered
+2025-11-08T08:58:23.809Z | admin | view_registered | series:mha | Playback registered
+2025-11-08T08:58:38.667Z | admin | view_registered | movie:roma | Playback registered
+2025-11-08T08:58:38.670Z | admin | view_registered | movie:roma | Playback registered
+2025-11-08T08:58:39.171Z | admin | update_history | roma | {"contentId":"roma","type":"movie","progress":0.0002175518018018018,"lastWatched":"2025-11-08T08:58:39.166Z"}
+2025-11-08T08:58:44.375Z | admin | update_history | roma | {"contentId":"roma","type":"movie","progress":0.27413525225225227,"lastWatched":"2025-11-08T08:58:44.370Z"}

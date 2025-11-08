@@ -3,16 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm:dev:server\" \"npm:dev:next\"",
-    "dev:server": "nodemon --watch server.js server.js",
-    "dev:next": "next dev",
+    "dev": "nodemon --watch server.js server.js",
     "build": "next build",
-    "start": "node server.js",
-    "lint": "next lint",
+    "start": "set NODE_ENV=production&& node server.js",
     "seed": "node scripts/seed.js",
     "backup": "node scripts/backup.js",
-    "lint:catalog": "node scripts/lint-catalog.js"
+    "lint:catalog": "node scripts/lint-catalog.js",
+    "lint": "next lint"
   },
+  "engines": { "node": ">=18" },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
@@ -36,7 +35,6 @@
     "@types/node": "^20.14.9",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "concurrently": "^8.2.2",
     "nodemon": "^3.1.0",
     "typescript": "^5.5.4"
   }
