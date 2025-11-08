@@ -5,7 +5,7 @@
 "scripts": {
     "dev": "nodemon --watch server.js server.js",
     "build": "node scripts/gen-proxy.js && sleep 1 && next build",
-    "start": "cross-env NODE_ENV=production node server.js",
+    "start": "cross-env NODE_ENV=production node scripts/seed-if-empty.js && cross-env NODE_ENV=production node server.js",
     "seed": "node scripts/seed.js",
     "backup": "node scripts/backup.js",
     "lint:catalog": "node scripts/lint-catalog.js",

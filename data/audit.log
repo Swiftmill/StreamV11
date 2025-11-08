@@ -51,3 +51,7 @@
 2025-11-08T08:58:38.670Z | admin | view_registered | movie:roma | Playback registered
 2025-11-08T08:58:39.171Z | admin | update_history | roma | {"contentId":"roma","type":"movie","progress":0.0002175518018018018,"lastWatched":"2025-11-08T08:58:39.166Z"}
 2025-11-08T08:58:44.375Z | admin | update_history | roma | {"contentId":"roma","type":"movie","progress":0.27413525225225227,"lastWatched":"2025-11-08T08:58:44.370Z"}
+2025-11-08T09:38:25.425Z | admin | view_registered | series:mha | Playback registered
+2025-11-08T09:42:19.306Z | admin | logout | auth | User logout
+2025-11-08T09:42:30.968Z | admin | login | auth | Successful login
+2025-11-08T09:42:41.754Z | admin | login | auth | Successful login
