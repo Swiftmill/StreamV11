@@ -13,31 +13,25 @@ const known = new Set([
   "route.ts", "route.tsx"
 ]);
 
-function isRouteFile(name) {
-  return name === "route.ts" || name === "route.tsx";
-}
+const isRouteFile = (n) => n === "route.ts" || n === "route.tsx";
 
 function walk(dir, relBase = "") {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const e of entries) {
     const abs = path.join(dir, e.name);
     const rel = path.join(relBase, e.name);
-    if (e.isDirectory()) {
-      walk(abs, rel);
-      continue;
-    }
+    if (e.isDirectory()) { walk(abs, rel); continue; }
+
     const ext = path.extname(e.name);
     if (!exts.has(ext)) continue;
     if (!known.has(e.name)) continue;
 
-    // Exemple: relFromInner = "movies/page.tsx"
-    const relFromInner = rel.replace(/\\/g, "/");
+    const relFromInner = rel.replace(/\\/g, "/"); // ex: "series/page.tsx"
     const outFile = path.join(OUT_DIR, relFromInner);
-    const outDir = path.dirname(outFile);
-    fs.mkdirSync(outDir, { recursive: true });
+    fs.mkdirSync(path.dirname(outFile), { recursive: true });
 
-    // IMPORTANT: ré-export depuis "@/app/<...>" (donc app/app/<...> depuis la racine)
-    const srcImport = `@/app/${relFromInner}`;
+    // ⬇️ IMPORT VERS app/app/** (évite l’auto-import des proxys)
+    const srcImport = `@/app/app/${relFromInner}`;
     const content = isRouteFile(e.name)
       ? `export * from '${srcImport}';\n`
       : `export { default } from '${srcImport}';\nexport * from '${srcImport}';\n`;
@@ -53,6 +47,5 @@ if (!fs.existsSync(SRC_DIR)) {
 }
 
 walk(SRC_DIR);
-// lock pour s'assurer que le FS est flush avant next build
 fs.writeFileSync(path.join(process.cwd(), ".proxy-lock"), Date.now().toString());
 console.log("✅ Proxies generated from app/app/* to app/*");
