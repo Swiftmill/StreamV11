@@ -1,14 +1,21 @@
 // scripts/gen-proxy.js
-// Miroir des routes depuis app/app/* vers app/* (re-export)
 const fs = require("fs");
 const path = require("path");
 
-const SRC_DIR = path.join(process.cwd(), "app", "app");
-const OUT_DIR = path.join(process.cwd(), "app");
+const SRC_DIR = path.join(process.cwd(), "app", "app"); // vrai contenu
+const OUT_DIR = path.join(process.cwd(), "app");        // proxys
 
-// extensions de fichiers à prendre en compte
 const exts = new Set([".ts", ".tsx"]);
-const isRouteFile = (name) => /^route\.(ts|tsx)$/.test(name);
+const known = new Set([
+  "page.tsx", "layout.tsx", "template.tsx",
+  "loading.tsx", "error.tsx", "not-found.tsx",
+  "head.tsx", "default.tsx",
+  "route.ts", "route.tsx"
+]);
+
+function isRouteFile(name) {
+  return name === "route.ts" || name === "route.tsx";
+}
 
 function walk(dir, relBase = "") {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -17,45 +24,35 @@ function walk(dir, relBase = "") {
     const rel = path.join(relBase, e.name);
     if (e.isDirectory()) {
       walk(abs, rel);
-    } else {
-      const ext = path.extname(e.name);
-      if (!exts.has(ext)) continue;
-
-      // On ne gère que fichiers Next “app router”
-      const base = path.basename(e.name);
-      const known = new Set([
-        "page.tsx", "layout.tsx", "template.tsx",
-        "loading.tsx", "error.tsx", "not-found.tsx",
-        "head.tsx", "default.tsx",
-        "route.ts", "route.tsx"
-      ]);
-      if (!known.has(base)) continue;
-
-      const relFromInner = rel; // ex: movies/page.tsx
-      const outRel = path.join(relBase); // même structure
-      const outDir = path.join(OUT_DIR, path.dirname(relFromInner));
-      fs.mkdirSync(outDir, { recursive: true });
-
-      const srcImport = `./app/${relFromInner.replace(/\\/g, "/")}`;
-      const outFile = path.join(OUT_DIR, relFromInner);
-
-      // route.ts(x) n'a pas de default → export *
-      const content = isRouteFile(base)
-        ? `export * from '${srcImport}';\n`
-        : `export { default } from '${srcImport}';\nexport * from '${srcImport}';\n`;
-
-      fs.writeFileSync(outFile, content, "utf8");
+      continue;
     }
+    const ext = path.extname(e.name);
+    if (!exts.has(ext)) continue;
+    if (!known.has(e.name)) continue;
+
+    // Exemple: relFromInner = "movies/page.tsx"
+    const relFromInner = rel.replace(/\\/g, "/");
+    const outFile = path.join(OUT_DIR, relFromInner);
+    const outDir = path.dirname(outFile);
+    fs.mkdirSync(outDir, { recursive: true });
+
+    // IMPORTANT: ré-export depuis "@/app/<...>" (donc app/app/<...> depuis la racine)
+    const srcImport = `@/app/${relFromInner}`;
+    const content = isRouteFile(e.name)
+      ? `export * from '${srcImport}';\n`
+      : `export { default } from '${srcImport}';\nexport * from '${srcImport}';\n`;
+
+    fs.writeFileSync(outFile, content, "utf8");
+    console.log("→ proxy:", path.posix.join("app", relFromInner), "=>", srcImport);
   }
 }
 
 if (!fs.existsSync(SRC_DIR)) {
-  console.error("No app/app directory found. Nothing to mirror.");
+  console.log("No app/app directory found. Nothing to mirror.");
   process.exit(0);
 }
 
 walk(SRC_DIR);
-console.log("✅ Proxies generated from app/app/* to app/*");
-// force sync disk pour éviter race condition Next.js
+// lock pour s'assurer que le FS est flush avant next build
 fs.writeFileSync(path.join(process.cwd(), ".proxy-lock"), Date.now().toString());
-
+console.log("✅ Proxies generated from app/app/* to app/*");

@@ -11,7 +11,7 @@
     "lint:catalog": "node scripts/lint-catalog.js",
     "lint": "next lint"
   },
-  "engines": { "node": "18.x" },
+  "engines": { "node": "20.x" },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
