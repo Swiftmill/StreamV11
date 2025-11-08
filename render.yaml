@@ -12,8 +12,6 @@ services:
         value: production
       - key: COOKIE_SECRET
         generateValue: true
+      - key: DATA_DIR
+        value: /tmp/data   # dossier temporaire (non persistant)
     healthCheckPath: /api/health
-    disk:
-      name: data
-      mountPath: /app/data
-      sizeGB: 1

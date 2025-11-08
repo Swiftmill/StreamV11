@@ -22,7 +22,7 @@ const SESSION_COOKIE = 'stream_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CSRF_HEADER = 'x-csrf-token';
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const USERS_DIR = path.join(DATA_DIR, 'users');
 const HISTORY_DIR = path.join(USERS_DIR, 'history');
 const CATALOG_DIR = path.join(DATA_DIR, 'catalog');
