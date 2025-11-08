@@ -1,24 +1,24 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { useMovies, useSeries, useSession, updateHistory } from '@/lib/api';
 import type { Episode, Movie, Season, Series } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || ''; // même domaine (rewrite -> Express)
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 type SeriesSelection = { serie: Series; season: Season; episode: Episode };
 type Selection = Movie | SeriesSelection | null;
 
-export default function WatchPage() {
-  const searchParams = useSearchParams();
+function WatchInner() {
+  const searchParams = useSearchParams(); // ← SOUS Suspense
   const router = useRouter();
 
   const { data: session } = useSession();
-  const { data: movies } = useMovies();   // undefined au 1er rendu
-  const { data: series } = useSeries();   // undefined au 1er rendu
+  const { data: movies } = useMovies();
+  const { data: series } = useSeries();
 
   const [autoAdvance, setAutoAdvance] = useState(true);
   const lastUpdateRef = useRef(0);
@@ -37,7 +37,7 @@ export default function WatchPage() {
     (type === 'movie' && movies !== undefined) ||
     (type === 'series' && series !== undefined);
 
-  // ---- sélection du contenu (attend dataReady)
+  // ---- sélection du contenu
   const selected = useMemo<Selection>(() => {
     if (!dataReady) return null;
 
@@ -77,12 +77,10 @@ export default function WatchPage() {
 
   // ---- redirections propres
   useEffect(() => {
-    // pas de paramètres -> retour app
     if (!hasQuery) router.replace('/app');
   }, [hasQuery, router]);
 
   useEffect(() => {
-    // paramètres présents + données chargées + rien trouvé -> retour app
     if (hasQuery && dataReady && !selected) router.replace('/app');
   }, [hasQuery, dataReady, selected, router]);
 
@@ -183,7 +181,7 @@ export default function WatchPage() {
   }
 
   // ---- rendu
-  if (!hasQuery) return null;               // sécurité
+  if (!hasQuery) return null;
   if (!dataReady) {
     return (
       <AppShell>
@@ -224,5 +222,13 @@ export default function WatchPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<AppShell><div style={{ padding: '2rem', opacity: 0.7 }}>Chargement…</div></AppShell>}>
+      <WatchInner />
+    </Suspense>
   );
 }
