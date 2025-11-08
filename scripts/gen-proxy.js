@@ -56,3 +56,6 @@ if (!fs.existsSync(SRC_DIR)) {
 
 walk(SRC_DIR);
 console.log("✅ Proxies generated from app/app/* to app/*");
+// force sync disk pour éviter race condition Next.js
+fs.writeFileSync(path.join(process.cwd(), ".proxy-lock"), Date.now().toString());
+
