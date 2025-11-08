@@ -13,5 +13,5 @@ services:
       - key: COOKIE_SECRET
         generateValue: true
       - key: DATA_DIR
-        value: /tmp/data   # dossier temporaire (non persistant)
+        value: /tmp/data
     healthCheckPath: /api/health
