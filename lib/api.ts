@@ -41,9 +41,11 @@ export async function logout(csrfToken: string) {
 }
 
 export function useSession() {
-  return useSWR<SessionInfo>('/api/auth/session', () => http<SessionInfo>('/api/auth/session'), {
-    shouldRetryOnError: false
-  });
+  return useSWR<SessionInfo>(
+    '/api/auth/session',
+    () => http<SessionInfo>('/api/auth/session'),
+    { shouldRetryOnError: false, revalidateOnFocus: false }
+  );
 }
 
 // ---------- DATA HOOKS ----------
@@ -104,8 +106,11 @@ export async function deleteMovie(id: string, csrfToken: string) {
 
 export const createSeries = (series: Series, csrf: string) => authed<Series>('POST', '/api/series', series, csrf);
 export const updateSeries = (series: Series, csrf: string) => authed<Series>('PUT', `/api/series/${series.slug}`, series, csrf);
-export const upsertEpisode = (slug: string, payload: Episode & { seriesTitle?: string; seriesSynopsis?: string; seriesGenres?: string[]; seriesPosterUrl?: string }, csrf: string) =>
-  authed<Series>('POST', `/api/series/${slug}/episodes`, payload, csrf);
+export const upsertEpisode = (
+  slug: string,
+  payload: Episode & { seriesTitle?: string; seriesSynopsis?: string; seriesGenres?: string[]; seriesPosterUrl?: string },
+  csrf: string
+) => authed<Series>('POST', `/api/series/${slug}/episodes`, payload, csrf);
 export async function deleteSeries(slug: string, csrfToken: string) {
   await http(`/api/series/${slug}`, { method: 'DELETE', headers: { 'x-csrf-token': csrfToken } });
 }

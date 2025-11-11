@@ -19,7 +19,8 @@ const DEV = process.env.NODE_ENV !== 'production';
 const LOCAL_SPLIT = process.env.LOCAL_SPLIT === '1';
 const PORT = Number(process.env.PORT || 3000);
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'streamv11-cookie-secret';
-const SESSION_COOKIE = 'stream_session';
+// Host-only cookie pour Render (HTTPS) : préfixe __Host- (pas de domain, path='/')
+const SESSION_COOKIE = '__Host-stream_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const CSRF_HEADER = 'x-csrf-token';
 
@@ -57,13 +58,22 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// CORS pour dev split
+// CORS (uniquement si frontend et API sont sur des ports différents en local)
 if (DEV && LOCAL_SPLIT) {
   app.use(cors({ origin: (_o, cb) => cb(null, true), credentials: true }));
 }
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser(COOKIE_SECRET));
+
+// Canonicaliser www → apex (évite perdre le cookie si l'hôte change)
+app.use((req, res, next) => {
+  const host = req.headers.host || '';
+  if (host.startsWith('www.')) {
+    return res.redirect(301, `https://${host.slice(4)}${req.url}`);
+  }
+  next();
+});
 
 // Rate limit admin
 const adminLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
@@ -91,7 +101,10 @@ const subtitleSchema = z.preprocess((val) => {
     }
   }
   return val;
-}, z.object({ lang: z.string().min(2).max(8), url: z.string().refine(u => /^https?:\/\//i.test(u) || u.startsWith('/'), 'url must be http(s) or /path') }));
+}, z.object({
+  lang: z.string().min(2).max(8),
+  url: z.string().refine(u => /^https?:\/\//i.test(u) || u.startsWith('/'), 'url must be http(s) or /path')
+}));
 
 const subtitlesField = z.preprocess((val) => {
   if (typeof val === 'string') return val.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
@@ -297,7 +310,7 @@ async function incrementSeriesViews(slug) {
   await saveSeries(series);
 }
 
-const VIEWS_COOKIE = 'stream_viewed';
+const VIEWS_COOKIE = '__Host-stream_viewed';
 function parseViewCookie(raw) { if (!raw) return []; try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
 async function registerView(req, res, type, contentId) {
   const raw = req.signedCookies[VIEWS_COOKIE];
@@ -307,7 +320,12 @@ async function registerView(req, res, type, contentId) {
   if (!existing.some(e => e.key === key)) {
     existing.push({ key, expiresAt: now + 24 * 60 * 60 * 1000 });
     res.cookie(VIEWS_COOKIE, JSON.stringify(existing), {
-      httpOnly: true, signed: true, sameSite: 'lax', secure: true, maxAge: 24 * 60 * 60 * 1000
+      httpOnly: true,
+      signed: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000
     });
     if (type === 'movie') await incrementMovieViews(contentId);
     else await incrementSeriesViews(contentId);
@@ -349,8 +367,9 @@ app.post('/api/auth/login', async (req, res) => {
     res.cookie(SESSION_COOKIE, sessionId, {
       httpOnly: true,
       signed: true,
-      sameSite: 'lax', // same-origin grâce à ORIGIN=''
+      sameSite: 'lax', // same-origin (client ORIGIN='' => même host)
       secure: true,
+      path: '/',       // requis par __Host-
       maxAge: SESSION_TTL_MS
     });
     await appendAudit(user.username, 'login', 'auth', 'Successful login');
@@ -362,7 +381,7 @@ app.post('/api/auth/logout', requireAuth(), requireCsrf, async (req, res) => {
   const sessionId = req.signedCookies[SESSION_COOKIE];
   sessions.delete(sessionId);
   await persistSessions();
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
   await appendAudit(req.user.username, 'logout', 'auth', 'User logout');
   res.json({ success: true });
 });
