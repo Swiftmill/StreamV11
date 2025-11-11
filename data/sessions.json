@@ -7,10 +7,10 @@
     "expiresAt": 1763199750963
   },
   {
-    "id": "544ecb07-4edd-40ee-8f01-820e2aa281f4",
+    "id": "7e497319-9731-4f4c-ae8e-17e325f52772",
     "username": "admin",
     "role": "admin",
-    "csrfToken": "c3612ea0d2ad0793d150a0b1bc8c1055b48186f7f326065acdb944877f2eda1e",
-    "expiresAt": 1763199761749
+    "csrfToken": "9ad398f470d74adfe61264768cd5a74a6966bef016b50ad2267cf4774963fe4c",
+    "expiresAt": 1763462880029
   }
 ]

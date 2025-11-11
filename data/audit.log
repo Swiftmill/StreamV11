@@ -55,3 +55,5 @@
 2025-11-08T09:42:19.306Z | admin | logout | auth | User logout
 2025-11-08T09:42:30.968Z | admin | login | auth | Successful login
 2025-11-08T09:42:41.754Z | admin | login | auth | Successful login
+2025-11-11T10:45:28.753Z | admin | logout | auth | User logout
+2025-11-11T10:48:00.033Z | admin | login | auth | Successful login
