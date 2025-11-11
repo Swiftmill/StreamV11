@@ -4,13 +4,8 @@ import useSWR, { mutate } from 'swr';
 import DOMPurify from 'isomorphic-dompurify';
 import type { Movie, Series, Category, HistoryEntry, SessionInfo, Role, Episode } from '@/types';
 
-// ➜ en prod on force la même origine (pas d'URL absolue http://localhost)
-const ORIGIN =
-  process.env.NEXT_PUBLIC_API_BASE_URL &&
-  !process.env.NEXT_PUBLIC_API_BASE_URL.includes('localhost') &&
-  process.env.NEXT_PUBLIC_API_BASE_URL.startsWith('https')
-    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, '')
-    : '';
+// Toujours même origine (local ou Render) pour envoyer les cookies
+const ORIGIN = '';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -96,7 +91,7 @@ export async function ensureRole(required: Role, session: SessionInfo | undefine
 async function authed<T>(method: string, route: string, body: unknown, csrfToken: string) {
   return http<T>(route, {
     method,
-    headers: { 'x-csrf-token': csrfToken },
+    headers: { 'x-csrf-token': csrfToken, ...JSON_HEADERS },
     body: body ? JSON.stringify(body) : undefined
   });
 }

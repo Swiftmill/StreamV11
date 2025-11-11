@@ -17,7 +17,7 @@ const nextjs = require('next');
 
 const DEV = process.env.NODE_ENV !== 'production';
 const LOCAL_SPLIT = process.env.LOCAL_SPLIT === '1';
-const PORT = Number(process.env.PORT || 3000); // un seul port Next + API
+const PORT = Number(process.env.PORT || 3000);
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'streamv11-cookie-secret';
 const SESSION_COOKIE = 'stream_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -37,9 +37,9 @@ const Role = { ADMIN: 'admin', USER: 'user' };
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1); // cookies Secure derrière proxy
+app.set('trust proxy', 1);
 
-// Helmet (CSP compatible Next/HLS)
+// Helmet
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
@@ -57,7 +57,7 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
-// CORS seulement pour le dev split (frontend:3000, api:3001)
+// CORS pour dev split
 if (DEV && LOCAL_SPLIT) {
   app.use(cors({ origin: (_o, cb) => cb(null, true), credentials: true }));
 }
@@ -74,14 +74,12 @@ const userSchema = z.object({
   password: z.string().min(8),
   role: z.enum([Role.ADMIN, Role.USER])
 });
-
 const userUpdateSchema = z.object({
   password: z.string().min(8).optional(),
   active: z.boolean().optional(),
   role: z.enum([Role.ADMIN, Role.USER]).optional()
 });
 
-// Sous-titres: accepte "fr:https://", "fr:/path.vtt", objet {lang,url}
 const subtitleSchema = z.preprocess((val) => {
   if (typeof val === 'string') {
     const i = val.indexOf(':');
@@ -93,10 +91,7 @@ const subtitleSchema = z.preprocess((val) => {
     }
   }
   return val;
-}, z.object({
-  lang: z.string().min(2).max(8),
-  url: z.string().refine(u => /^https?:\/\//i.test(u) || u.startsWith('/'), 'url must be http(s) or /path')
-}));
+}, z.object({ lang: z.string().min(2).max(8), url: z.string().refine(u => /^https?:\/\//i.test(u) || u.startsWith('/'), 'url must be http(s) or /path') }));
 
 const subtitlesField = z.preprocess((val) => {
   if (typeof val === 'string') return val.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
@@ -104,80 +99,40 @@ const subtitlesField = z.preprocess((val) => {
 }, z.array(subtitleSchema));
 
 const movieSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().min(1),
+  id: z.string().min(1), title: z.string().min(1), description: z.string().min(1),
   releaseYear: z.number().int().min(1900).max(new Date().getFullYear() + 1),
-  duration: z.number().int().positive(),
-  genres: z.array(z.string().min(1)).min(1),
-  rating: z.string().min(1),
-  posterUrl: z.string().url(),
-  streamUrl: z.string().url(),
-  subtitles: subtitlesField,
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  published: z.boolean(),
-  featured: z.boolean(),
-  views: z.number().int().nonnegative()
+  duration: z.number().int().positive(), genres: z.array(z.string().min(1)).min(1),
+  rating: z.string().min(1), posterUrl: z.string().url(), streamUrl: z.string().url(),
+  subtitles: subtitlesField, createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
+  published: z.boolean(), featured: z.boolean(), views: z.number().int().nonnegative()
 });
-
 const episodeSchema = z.object({
-  season: z.number().int().min(1),
-  episode: z.number().int().min(1),
-  title: z.string().min(1),
-  synopsis: z.string().min(1),
-  duration: z.number().int().positive(),
-  streamUrl: z.string().url(),
-  subtitles: subtitlesField,
-  releaseDate: z.string().datetime()
+  season: z.number().int().min(1), episode: z.number().int().min(1),
+  title: z.string().min(1), synopsis: z.string().min(1),
+  duration: z.number().int().positive(), streamUrl: z.string().url(),
+  subtitles: subtitlesField, releaseDate: z.string().datetime()
 });
-
 const seriesSchema = z.object({
-  slug: z.string().min(1),
-  title: z.string().min(1),
-  synopsis: z.string().min(1),
-  genres: z.array(z.string().min(1)).min(1),
-  posterUrl: z.string().url(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  published: z.boolean(),
-  featured: z.boolean(),
-  views: z.number().int().nonnegative(),
-  seasons: z.array(z.object({
-    season: z.number().int().min(1),
-    episodes: z.array(episodeSchema)
-  }))
+  slug: z.string().min(1), title: z.string().min(1), synopsis: z.string().min(1),
+  genres: z.array(z.string().min(1)).min(1), posterUrl: z.string().url(),
+  createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
+  published: z.boolean(), featured: z.boolean(), views: z.number().int().nonnegative(),
+  seasons: z.array(z.object({ season: z.number().int().min(1), episodes: z.array(episodeSchema) }))
 });
-
 const categorySchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  order: z.number().int().nonnegative(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime()
+  id: z.string().min(1), name: z.string().min(1), order: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(), updatedAt: z.string().datetime()
 });
-
 const historyEntrySchema = z.object({
-  contentId: z.string().min(1),
-  type: z.enum(['movie', 'series']),
-  progress: z.number().min(0).max(1),
-  lastWatched: z.string().datetime(),
-  season: z.number().int().min(1).optional(),
-  episode: z.number().int().min(1).optional()
+  contentId: z.string().min(1), type: z.enum(['movie','series']),
+  progress: z.number().min(0).max(1), lastWatched: z.string().datetime(),
+  season: z.number().int().min(1).optional(), episode: z.number().int().min(1).optional()
 });
-
 const auditEventSchema = z.object({
-  timestamp: z.string().datetime(),
-  user: z.string().min(1),
-  action: z.string().min(1),
-  target: z.string().min(1),
-  details: z.string().min(1)
+  timestamp: z.string().datetime(), user: z.string().min(1),
+  action: z.string().min(1), target: z.string().min(1), details: z.string().min(1)
 });
-
-const playSchema = z.object({
-  contentId: z.string().min(1),
-  type: z.enum(['movie', 'series'])
-});
+const playSchema = z.object({ contentId: z.string().min(1), type: z.enum(['movie','series']) });
 
 // ---------- Sessions ----------
 const sessions = new Map();
@@ -191,24 +146,17 @@ async function ensureDirectories() {
 }
 
 async function readJSON(filePath, defaultValue) {
-  try {
-    const data = await fsp.readFile(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (e) {
-    if (e.code === 'ENOENT') return defaultValue;
-    throw e;
-  }
+  try { return JSON.parse(await fsp.readFile(filePath, 'utf-8')); }
+  catch (e) { if (e.code === 'ENOENT') return defaultValue; throw e; }
 }
 
-// --- NORMALISATION TOLÉRANTE --------------------------------
+// --- NORMALISATION TOLÉRANTE ---
 function normalizeUsersFile(x) {
-  // {users:[...]}, [...] ou autre
   if (x && Array.isArray(x.users)) return x.users;
   if (Array.isArray(x)) return x;
   return [];
 }
 function normalizeAdminFile(x) {
-  // {users:[...]}, {username:...}, ou autre
   if (x && Array.isArray(x.users)) return x.users;
   if (x && typeof x === 'object' && x.username) return [x];
   return [];
@@ -222,14 +170,9 @@ async function writeFileLocked(filePath, content) {
     const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
     await fsp.writeFile(tmpPath, content, 'utf-8');
     await fsp.rename(tmpPath, filePath);
-  } finally {
-    await release();
-  }
+  } finally { await release(); }
 }
-
-async function writeJSON(filePath, data) {
-  await writeFileLocked(filePath, JSON.stringify(data, null, 2));
-}
+async function writeJSON(filePath, data) { await writeFileLocked(filePath, JSON.stringify(data, null, 2)); }
 
 async function appendAudit(user, action, target, details) {
   const entry = { timestamp: new Date().toISOString(), user, action, target, details };
@@ -250,34 +193,23 @@ function cleanExpiredSessions() {
   for (const [id, s] of sessions.entries()) if (s.expiresAt <= now) sessions.delete(id);
 }
 
-// --- USERS (FIX) ---------------------------------------------
+// --- USERS (FIX) ---
 async function getAllUsers() {
   const adminsRaw = await readJSON(path.join(USERS_DIR, 'admin.json'), null);
   const usersRaw  = await readJSON(path.join(USERS_DIR, 'users.json'), null);
-  const admins = normalizeAdminFile(adminsRaw);
-  const users  = normalizeUsersFile(usersRaw);
-  return [...admins, ...users];
+  return [...normalizeAdminFile(adminsRaw), ...normalizeUsersFile(usersRaw)];
 }
-
 async function findUser(username) {
   const adminsPath = path.join(USERS_DIR, 'admin.json');
   const usersPath  = path.join(USERS_DIR, 'users.json');
-
-  const adminsRaw = await readJSON(adminsPath, null);
-  const usersRaw  = await readJSON(usersPath, null);
-
-  const admins = normalizeAdminFile(adminsRaw);
-  const users  = normalizeUsersFile(usersRaw);
-
+  const admins = normalizeAdminFile(await readJSON(adminsPath, null));
+  const users  = normalizeUsersFile(await readJSON(usersPath, null));
   const adminUser = admins.find(u => u && u.username === username);
   if (adminUser) return { user: adminUser, file: adminsPath, collection: admins };
-
   const regularUser = users.find(u => u && u.username === username);
   if (regularUser) return { user: regularUser, file: usersPath, collection: users };
-
   return null;
 }
-
 async function saveUserRecord(filePath, users) { await writeJSON(filePath, { users }); }
 
 function requireAuth(role) {
@@ -287,8 +219,7 @@ function requireAuth(role) {
     cleanExpiredSessions();
     const session = sessions.get(sessionId);
     if (!session || session.expiresAt <= Date.now()) {
-      sessions.delete(sessionId);
-      await persistSessions();
+      sessions.delete(sessionId); await persistSessions();
       return res.status(401).json({ error: 'Session expired' });
     }
     if (role && session.role !== role) return res.status(403).json({ error: 'Forbidden' });
@@ -297,7 +228,6 @@ function requireAuth(role) {
     next();
   };
 }
-
 function requireCsrf(req, res, next) {
   const token = req.headers[CSRF_HEADER];
   if (!token || typeof token !== 'string') return res.status(403).json({ error: 'CSRF token missing' });
@@ -306,21 +236,9 @@ function requireCsrf(req, res, next) {
   next();
 }
 
-function sanitizeMoviePayload(payload) {
-  const parsed = movieSchema.safeParse(payload);
-  if (!parsed.success) throw parsed.error;
-  return parsed.data;
-}
-function sanitizeSeriesPayload(payload) {
-  const parsed = seriesSchema.safeParse(payload);
-  if (!parsed.success) throw parsed.error;
-  return parsed.data;
-}
-function sanitizeCategoryPayload(payload) {
-  const parsed = categorySchema.safeParse(payload);
-  if (!parsed.success) throw parsed.error;
-  return parsed.data;
-}
+function sanitizeMoviePayload(payload) { const p = movieSchema.safeParse(payload); if (!p.success) throw p.error; return p.data; }
+function sanitizeSeriesPayload(payload) { const p = seriesSchema.safeParse(payload); if (!p.success) throw p.error; return p.data; }
+function sanitizeCategoryPayload(payload) { const p = categorySchema.safeParse(payload); if (!p.success) throw p.error; return p.data; }
 
 async function getMovies() {
   const data = await readJSON(MOVIES_FILE, { movies: [] });
@@ -329,14 +247,10 @@ async function getMovies() {
   return parsed.data.movies;
 }
 async function saveMovies(movies) {
-  const uniqueIds = new Set();
-  for (const m of movies) {
-    if (uniqueIds.has(m.id)) throw new Error(`Duplicate movie id ${m.id}`);
-    uniqueIds.add(m.id);
-  }
+  const ids = new Set();
+  for (const m of movies) { if (ids.has(m.id)) throw new Error(`Duplicate movie id ${m.id}`); ids.add(m.id); }
   await writeJSON(MOVIES_FILE, { movies });
 }
-
 async function getSeries(slug) {
   const filePath = path.join(SERIES_DIR, `${slug}.json`);
   const data = await readJSON(filePath, null);
@@ -345,23 +259,16 @@ async function getSeries(slug) {
   if (!parsed.success) throw parsed.error;
   return parsed.data;
 }
-async function saveSeries(series) {
-  const filePath = path.join(SERIES_DIR, `${series.slug}.json`);
-  await writeJSON(filePath, series);
-}
+async function saveSeries(series) { await writeJSON(path.join(SERIES_DIR, `${series.slug}.json`), series); }
 async function listSeries() {
   const entries = await fsp.readdir(SERIES_DIR, { withFileTypes: true }).catch(() => []);
   const list = [];
-  for (const e of entries) {
-    if (e.isFile() && e.name.endsWith('.json')) {
-      const slug = e.name.replace(/\.json$/, '');
-      const item = await getSeries(slug);
-      if (item) list.push(item);
-    }
+  for (const e of entries) if (e.isFile() && e.name.endsWith('.json')) {
+    const item = await getSeries(e.name.replace(/\.json$/, ''));
+    if (item) list.push(item);
   }
   return list;
 }
-
 async function getCategories() {
   const data = await readJSON(CATEGORIES_FILE, { categories: [] });
   const parsed = z.object({ categories: z.array(categorySchema) }).safeParse(data);
@@ -370,19 +277,16 @@ async function getCategories() {
 }
 async function saveCategories(categories) {
   const ids = new Set();
-  for (const c of categories) {
-    if (ids.has(c.id)) throw new Error(`Duplicate category id ${c.id}`);
-    ids.add(c.id);
-  }
+  for (const c of categories) { if (ids.has(c.id)) throw new Error(`Duplicate category id ${c.id}`); ids.add(c.id); }
   await writeJSON(CATEGORIES_FILE, { categories });
 }
 
 async function incrementMovieViews(movieId) {
   const movies = await getMovies();
-  const index = movies.findIndex(m => m.id === movieId);
-  if (index === -1) return;
-  movies[index].views += 1;
-  movies[index].updatedAt = new Date().toISOString();
+  const i = movies.findIndex(m => m.id === movieId);
+  if (i === -1) return;
+  movies[i].views += 1;
+  movies[i].updatedAt = new Date().toISOString();
   await saveMovies(movies);
 }
 async function incrementSeriesViews(slug) {
@@ -394,11 +298,7 @@ async function incrementSeriesViews(slug) {
 }
 
 const VIEWS_COOKIE = 'stream_viewed';
-function parseViewCookie(raw) {
-  if (!raw) return [];
-  try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; }
-}
-
+function parseViewCookie(raw) { if (!raw) return []; try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; } }
 async function registerView(req, res, type, contentId) {
   const raw = req.signedCookies[VIEWS_COOKIE];
   const now = Date.now();
@@ -407,11 +307,7 @@ async function registerView(req, res, type, contentId) {
   if (!existing.some(e => e.key === key)) {
     existing.push({ key, expiresAt: now + 24 * 60 * 60 * 1000 });
     res.cookie(VIEWS_COOKIE, JSON.stringify(existing), {
-      httpOnly: true,
-      signed: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000
+      httpOnly: true, signed: true, sameSite: 'lax', secure: true, maxAge: 24 * 60 * 60 * 1000
     });
     if (type === 'movie') await incrementMovieViews(contentId);
     else await incrementSeriesViews(contentId);
@@ -422,7 +318,6 @@ function sortSeriesSeasons(series) {
   series.seasons.sort((a, b) => a.season - b.season);
   for (const s of series.seasons) s.episodes.sort((a, b) => a.episode - b.episode);
 }
-
 function handleError(res, error) {
   if (error instanceof z.ZodError) return res.status(400).json({ error: error.errors });
   return res.status(400).json({ error: error.message || 'Bad request' });
@@ -434,12 +329,9 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 // AUTH
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const schema = z.object({ username: z.string().min(1), password: z.string().min(1) });
-    const { username, password } = schema.parse(req.body);
-
+    const { username, password } = z.object({ username: z.string().min(1), password: z.string().min(1) }).parse(req.body);
     const record = await findUser(username);
     if (!record) return res.status(401).json({ error: 'Invalid credentials' });
-
     const { user } = record;
     if (user.active === false) return res.status(403).json({ error: 'User deactivated' });
 
@@ -457,8 +349,8 @@ app.post('/api/auth/login', async (req, res) => {
     res.cookie(SESSION_COOKIE, sessionId, {
       httpOnly: true,
       signed: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', // same-origin grâce à ORIGIN=''
+      secure: true,
       maxAge: SESSION_TTL_MS
     });
     await appendAudit(user.username, 'login', 'auth', 'Successful login');
@@ -474,23 +366,20 @@ app.post('/api/auth/logout', requireAuth(), requireCsrf, async (req, res) => {
   await appendAudit(req.user.username, 'logout', 'auth', 'User logout');
   res.json({ success: true });
 });
-
 app.get('/api/auth/session', requireAuth(), async (req, res) => {
   res.json({ username: req.user.username, role: req.user.role, csrfToken: req.session.csrfToken });
 });
 
 // USERS
-app.get('/api/users', requireAuth(Role.ADMIN), async (req, res) => {
+app.get('/api/users', requireAuth(Role.ADMIN), async (_req, res) => {
   const users = await getAllUsers();
   res.json(users.map(u => ({ ...u, passwordHash: undefined })));
 });
-
 app.post('/api/users', requireAuth(Role.ADMIN), requireCsrf, async (req, res) => {
   try {
     const parsed = userSchema.parse(req.body);
     const existing = await findUser(parsed.username);
     if (existing) throw new Error('User already exists');
-
     const passwordHash = await bcrypt.hash(parsed.password, 12);
     const now = new Date().toISOString();
     const newUser = { username: parsed.username, passwordHash, role: parsed.role, active: true, createdAt: now, updatedAt: now };
@@ -503,32 +392,27 @@ app.post('/api/users', requireAuth(Role.ADMIN), requireCsrf, async (req, res) =>
     res.status(201).json({ username: newUser.username, role: newUser.role, active: newUser.active, createdAt: newUser.createdAt });
   } catch (e) { handleError(res, e); }
 });
-
 app.put('/api/users/:username', requireAuth(Role.ADMIN), requireCsrf, async (req, res) => {
   try {
     const { username } = req.params;
     const updates = userUpdateSchema.parse(req.body);
     const record = await findUser(username);
     if (!record) return res.status(404).json({ error: 'User not found' });
-
     const { user, file, collection } = record;
     if (updates.password) user.passwordHash = await bcrypt.hash(updates.password, 12);
     if (typeof updates.active === 'boolean') user.active = updates.active;
     if (updates.role && updates.role !== user.role) user.role = updates.role;
     user.updatedAt = new Date().toISOString();
-
     await saveUserRecord(file, collection);
     await appendAudit(req.user.username, 'update_user', username, JSON.stringify(updates));
     res.json({ username: user.username, role: user.role, active: user.active, updatedAt: user.updatedAt });
   } catch (e) { handleError(res, e); }
 });
-
 app.delete('/api/users/:username', requireAuth(Role.ADMIN), requireCsrf, async (req, res) => {
   try {
     const { username } = req.params;
     const record = await findUser(username);
     if (!record) return res.status(404).json({ error: 'User not found' });
-
     const { file, collection } = record;
     const updated = collection.filter(u => u.username !== username);
     await saveUserRecord(file, updated);
@@ -610,16 +494,11 @@ app.post('/api/series/:slug/episodes', requireAuth(Role.ADMIN), requireCsrf, asy
     if (!existing) {
       const now = new Date().toISOString();
       const newSeries = {
-        slug,
-        title: req.body.seriesTitle || slug,
+        slug, title: req.body.seriesTitle || slug,
         synopsis: req.body.seriesSynopsis || 'Synopsis à venir',
         genres: req.body.seriesGenres || ['Drame'],
         posterUrl: req.body.seriesPosterUrl,
-        createdAt: now,
-        updatedAt: now,
-        published: true,
-        featured: false,
-        views: 0,
+        createdAt: now, updatedAt: now, published: true, featured: false, views: 0,
         seasons: [{ season: episodePayload.season, episodes: [episodePayload] }]
       };
       sortSeriesSeasons(newSeries);
@@ -629,10 +508,7 @@ app.post('/api/series/:slug/episodes', requireAuth(Role.ADMIN), requireCsrf, asy
       return res.status(201).json(validated);
     }
     let season = existing.seasons.find(s => s.season === episodePayload.season);
-    if (!season) {
-      season = { season: episodePayload.season, episodes: [] };
-      existing.seasons.push(season);
-    }
+    if (!season) { season = { season: episodePayload.season, episodes: [] }; existing.seasons.push(season); }
     const epIndex = season.episodes.findIndex(ep => ep.episode === episodePayload.episode);
     if (epIndex === -1) season.episodes.push(episodePayload);
     else season.episodes[epIndex] = episodePayload;
@@ -648,8 +524,7 @@ app.post('/api/series/:slug/episodes', requireAuth(Role.ADMIN), requireCsrf, asy
 app.delete('/api/series/:slug', requireAuth(Role.ADMIN), requireCsrf, async (req, res) => {
   try {
     const { slug } = req.params;
-    const filePath = path.join(SERIES_DIR, `${slug}.json`);
-    await fsp.unlink(filePath);
+    await fsp.unlink(path.join(SERIES_DIR, `${slug}.json`));
     await appendAudit(req.user.username, 'delete_series', slug, 'Series removed');
     res.status(204).send();
   } catch (e) {
@@ -742,9 +617,7 @@ const handle = nextApp.getRequestHandler();
   await ensureDirectories();
   await loadSessions();
   await nextApp.prepare();
-
   app.all('*', (req, res) => handle(req, res));
-
   app.listen(PORT, () => {
     console.log(`✅ StreamV11 ready on http://localhost:${PORT}  (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
   });
