@@ -20,10 +20,10 @@
         }
       ],
       "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2025-11-07T15:37:47.515Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
       "published": true,
       "featured": true,
-      "views": 2
+      "views": 0
     },
     {
       "id": "roma",
@@ -44,10 +44,10 @@
         }
       ],
       "createdAt": "2024-01-02T00:00:00.000Z",
-      "updatedAt": "2025-11-07T15:37:53.282Z",
+      "updatedAt": "2024-01-02T00:00:00.000Z",
       "published": true,
       "featured": false,
-      "views": 2
+      "views": 0
     },
     {
       "id": "bird-box",
@@ -167,10 +167,10 @@
         }
       ],
       "createdAt": "2024-01-07T00:00:00.000Z",
-      "updatedAt": "2025-11-07T15:37:35.723Z",
+      "updatedAt": "2024-01-07T00:00:00.000Z",
       "published": true,
       "featured": false,
-      "views": 1
+      "views": 0
     },
     {
       "id": "the-old-guard",
