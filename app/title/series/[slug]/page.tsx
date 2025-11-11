@@ -1,21 +1,34 @@
-import { notFound, redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { getServerSeries, getServerSession } from '@/lib/serverApi';
+import { useSession, fetchSeries } from '@/lib/api';
+import type { Series } from '@/types';
 
 interface SeriesPageProps {
   params: { slug: string };
 }
 
-export default async function SeriesPage({ params }: SeriesPageProps) {
-  const session = await getServerSession();
-  if (!session) {
-    redirect('/login');
-  }
-  const allSeries = await getServerSeries();
-  const serie = allSeries.find(item => item.slug === decodeURIComponent(params.slug));
-  if (!serie) {
-    notFound();
-  }
+export default function SeriesPage({ params }: SeriesPageProps) {
+  const router = useRouter();
+  const { data: session, error, isLoading } = useSession();
+  const [serie, setSerie] = useState<Series | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!session) { router.replace('/login'); return; }
+    fetchSeries(decodeURIComponent(params.slug))
+      .then(setSerie)
+      .catch(e => setLoadErr(String(e)));
+  }, [isLoading, session, params.slug, router]);
+
+  if (isLoading) return null;
+  if (error) return <AppShell><div>Erreur réseau.</div></AppShell>;
+  if (!session) return null; // redirigé
+  if (loadErr) return <AppShell><div>Introuvable.</div></AppShell>;
+  if (!serie) return null;
 
   return (
     <AppShell>
@@ -28,6 +41,7 @@ export default async function SeriesPage({ params }: SeriesPageProps) {
             <span>{serie.seasons.length} saisons</span>
           </div>
         </header>
+
         {serie.seasons.map(season => (
           <section key={season.season}>
             <h2 style={{ fontSize: '2rem' }}>Saison {season.season}</h2>

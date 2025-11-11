@@ -1,21 +1,34 @@
-import { notFound, redirect } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { getServerMovies, getServerSession } from '@/lib/serverApi';
+import { useSession, fetchMovie } from '@/lib/api';
+import type { Movie } from '@/types';
 
 interface MoviePageProps {
   params: { id: string };
 }
 
-export default async function MoviePage({ params }: MoviePageProps) {
-  const session = await getServerSession();
-  if (!session) {
-    redirect('/login');
-  }
-  const movies = await getServerMovies();
-  const movie = movies.find(item => item.id === decodeURIComponent(params.id));
-  if (!movie) {
-    notFound();
-  }
+export default function MoviePage({ params }: MoviePageProps) {
+  const router = useRouter();
+  const { data: session, error, isLoading } = useSession();
+  const [movie, setMovie] = useState<Movie | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!session) { router.replace('/login'); return; }
+    fetchMovie(decodeURIComponent(params.id))
+      .then(setMovie)
+      .catch(e => setLoadErr(String(e)));
+  }, [isLoading, session, params.id, router]);
+
+  if (isLoading) return null;
+  if (error) return <AppShell><div>Erreur réseau.</div></AppShell>;
+  if (!session) return null; // redirigé
+  if (loadErr) return <AppShell><div>Introuvable.</div></AppShell>;
+  if (!movie) return null;
 
   return (
     <AppShell>
