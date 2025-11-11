@@ -4,193 +4,119 @@ import useSWR, { mutate } from 'swr';
 import DOMPurify from 'isomorphic-dompurify';
 import type { Movie, Series, Category, HistoryEntry, SessionInfo, Role, Episode } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+// ➜ en prod on force la même origine (pas d'URL absolue http://localhost)
+const ORIGIN =
+  process.env.NEXT_PUBLIC_API_BASE_URL &&
+  !process.env.NEXT_PUBLIC_API_BASE_URL.includes('localhost') &&
+  process.env.NEXT_PUBLIC_API_BASE_URL.startsWith('https')
+    ? process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/+$/, '')
+    : '';
+
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-type Fetcher<T> = () => Promise<T>;
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const message = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(typeof message.error === 'string' ? message.error : response.statusText);
+async function handleJson<T>(res: Response): Promise<T> {
+  let data: any = null;
+  try { data = await res.json(); } catch { /* ignore */ }
+  if (!res.ok) {
+    const msg = (data && (data.error || data.message)) || res.statusText || 'Request failed';
+    throw new Error(String(msg));
   }
-  return response.json() as Promise<T>;
+  return data as T;
 }
 
-export async function login(username: string, password: string) {
-  const body = { username: DOMPurify.sanitize(username), password };
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: JSON.stringify(body),
-    credentials: 'include'
+async function http<T>(path: string, init: RequestInit = {}) {
+  const res = await fetch(`${ORIGIN}${path}`, {
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { ...(init.body ? JSON_HEADERS : {}), ...(init.headers || {}) },
+    ...init
   });
-  return handleResponse<SessionInfo>(res);
+  return handleJson<T>(res);
+}
+
+// ---------- AUTH ----------
+export function login(username: string, password: string) {
+  const body = { username: DOMPurify.sanitize(username), password };
+  return http<SessionInfo>('/api/auth/login', { method: 'POST', body: JSON.stringify(body) });
 }
 
 export async function logout(csrfToken: string) {
-  const res = await fetch(`${API_BASE}/api/auth/logout`, {
-    method: 'POST',
-    headers: { ...JSON_HEADERS, 'x-csrf-token': csrfToken },
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error('Logout failed');
-  }
+  await http('/api/auth/logout', { method: 'POST', headers: { 'x-csrf-token': csrfToken } });
   mutate('/api/auth/session');
 }
 
 export function useSession() {
-  return useSWR<SessionInfo>(
-    '/api/auth/session',
-    () =>
-      fetch(`${API_BASE}/api/auth/session`, {
-        credentials: 'include'
-      }).then(res => handleResponse<SessionInfo>(res)),
-    { shouldRetryOnError: false }
-  );
+  return useSWR<SessionInfo>('/api/auth/session', () => http<SessionInfo>('/api/auth/session'), {
+    shouldRetryOnError: false
+  });
 }
 
+// ---------- DATA HOOKS ----------
 export function useMovies() {
-  return useSWR<Movie[]>(
-    '/api/movies',
-    () =>
-      fetch(`${API_BASE}/api/movies`, {
-        credentials: 'include'
-      }).then(res => handleResponse<Movie[]>(res))
-  );
+  return useSWR<Movie[]>('/api/movies', () => http<Movie[]>('/api/movies'));
 }
 
 export function useSeries() {
-  return useSWR<Series[]>(
-    '/api/series',
-    () =>
-      fetch(`${API_BASE}/api/series`, {
-        credentials: 'include'
-      }).then(res => handleResponse<Series[]>(res))
-  );
+  return useSWR<Series[]>('/api/series', () => http<Series[]>('/api/series'));
 }
 
 export function useCategories() {
-  return useSWR<Category[]>(
-    '/api/categories',
-    () =>
-      fetch(`${API_BASE}/api/categories`, {
-        credentials: 'include'
-      }).then(res => handleResponse<Category[]>(res))
-  );
+  return useSWR<Category[]>('/api/categories', () => http<Category[]>('/api/categories'));
 }
 
 export function useHistory() {
-  return useSWR<HistoryEntry[]>(
-    '/api/history',
-    () =>
-      fetch(`${API_BASE}/api/history`, {
-        credentials: 'include'
-      }).then(res => handleResponse<HistoryEntry[]>(res))
-  );
+  return useSWR<HistoryEntry[]>('/api/history', () => http<HistoryEntry[]>('/api/history'));
 }
 
+// ---------- MUTATIONS ----------
 export async function updateHistory(entry: HistoryEntry, csrfToken: string) {
-  const res = await fetch(`${API_BASE}/api/history`, {
+  await http('/api/history', {
     method: 'POST',
-    headers: { ...JSON_HEADERS, 'x-csrf-token': csrfToken },
-    body: JSON.stringify(entry),
-    credentials: 'include'
+    headers: { 'x-csrf-token': csrfToken },
+    body: JSON.stringify(entry)
   });
-  if (!res.ok) {
-    throw new Error('Failed to update history');
-  }
   mutate('/api/history');
 }
 
 export async function fetchMovie(id: string) {
-  const movies = await fetch(`${API_BASE}/api/movies`, { credentials: 'include' }).then(res => handleResponse<Movie[]>(res));
-  return movies.find(movie => movie.id === id) || null;
+  const movies = await http<Movie[]>('/api/movies');
+  return movies.find(m => m.id === id) || null;
 }
 
 export async function fetchSeries(slug: string) {
-  const series = await fetch(`${API_BASE}/api/series`, { credentials: 'include' }).then(res => handleResponse<Series[]>(res));
-  return series.find(item => item.slug === slug) || null;
+  const list = await http<Series[]>('/api/series');
+  return list.find(s => s.slug === slug) || null;
 }
 
 export async function ensureRole(required: Role, session: SessionInfo | undefined) {
-  if (!session) {
-    throw new Error('Not authenticated');
-  }
-  if (session.role !== required) {
-    throw new Error('Not authorized');
-  }
+  if (!session) throw new Error('Not authenticated');
+  if (session.role !== required) throw new Error('Not authorized');
 }
 
-
-async function authorizedRequest<T>(method: string, route: string, body: unknown, csrfToken: string) {
-  const res = await fetch(`${API_BASE}${route}`, {
+async function authed<T>(method: string, route: string, body: unknown, csrfToken: string) {
+  return http<T>(route, {
     method,
-    headers: { ...JSON_HEADERS, 'x-csrf-token': csrfToken },
-    body: body ? JSON.stringify(body) : undefined,
-    credentials: 'include'
+    headers: { 'x-csrf-token': csrfToken },
+    body: body ? JSON.stringify(body) : undefined
   });
-  return handleResponse<T>(res);
 }
 
-export async function createMovie(movie: Movie, csrfToken: string) {
-  return authorizedRequest<Movie>('POST', '/api/movies', movie, csrfToken);
-}
-
-export async function updateMovie(movie: Movie, csrfToken: string) {
-  return authorizedRequest<Movie>('PUT', `/api/movies/${movie.id}`, movie, csrfToken);
-}
-
+export const createMovie = (movie: Movie, csrf: string) => authed<Movie>('POST', '/api/movies', movie, csrf);
+export const updateMovie = (movie: Movie, csrf: string) => authed<Movie>('PUT', `/api/movies/${movie.id}`, movie, csrf);
 export async function deleteMovie(id: string, csrfToken: string) {
-  const res = await fetch(`${API_BASE}/api/movies/${id}`, {
-    method: 'DELETE',
-    headers: { 'x-csrf-token': csrfToken },
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error('Suppression impossible');
-  }
+  await http(`/api/movies/${id}`, { method: 'DELETE', headers: { 'x-csrf-token': csrfToken } });
 }
 
-export async function createSeries(series: Series, csrfToken: string) {
-  return authorizedRequest<Series>('POST', '/api/series', series, csrfToken);
-}
-
-export async function updateSeries(series: Series, csrfToken: string) {
-  return authorizedRequest<Series>('PUT', `/api/series/${series.slug}`, series, csrfToken);
-}
-
-export async function upsertEpisode(slug: string, payload: Episode & { seriesTitle?: string; seriesSynopsis?: string; seriesGenres?: string[]; seriesPosterUrl?: string }, csrfToken: string) {
-  return authorizedRequest<Series>('POST', `/api/series/${slug}/episodes`, payload, csrfToken);
-}
-
+export const createSeries = (series: Series, csrf: string) => authed<Series>('POST', '/api/series', series, csrf);
+export const updateSeries = (series: Series, csrf: string) => authed<Series>('PUT', `/api/series/${series.slug}`, series, csrf);
+export const upsertEpisode = (slug: string, payload: Episode & { seriesTitle?: string; seriesSynopsis?: string; seriesGenres?: string[]; seriesPosterUrl?: string }, csrf: string) =>
+  authed<Series>('POST', `/api/series/${slug}/episodes`, payload, csrf);
 export async function deleteSeries(slug: string, csrfToken: string) {
-  const res = await fetch(`${API_BASE}/api/series/${slug}`, {
-    method: 'DELETE',
-    headers: { 'x-csrf-token': csrfToken },
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error('Suppression impossible');
-  }
+  await http(`/api/series/${slug}`, { method: 'DELETE', headers: { 'x-csrf-token': csrfToken } });
 }
 
-export async function createCategory(category: Category, csrfToken: string) {
-  return authorizedRequest<Category>('POST', '/api/categories', category, csrfToken);
-}
-
-export async function updateCategory(category: Category, csrfToken: string) {
-  return authorizedRequest<Category>('PUT', `/api/categories/${category.id}`, category, csrfToken);
-}
-
+export const createCategory = (category: Category, csrf: string) => authed<Category>('POST', '/api/categories', category, csrf);
+export const updateCategory = (category: Category, csrf: string) => authed<Category>('PUT', `/api/categories/${category.id}`, category, csrf);
 export async function deleteCategory(id: string, csrfToken: string) {
-  const res = await fetch(`${API_BASE}/api/categories/${id}`, {
-    method: 'DELETE',
-    headers: { 'x-csrf-token': csrfToken },
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    throw new Error('Suppression impossible');
-  }
+  await http(`/api/categories/${id}`, { method: 'DELETE', headers: { 'x-csrf-token': csrfToken } });
 }

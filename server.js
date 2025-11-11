@@ -16,7 +16,8 @@ const { z } = require('zod');
 const nextjs = require('next');
 
 const DEV = process.env.NODE_ENV !== 'production';
-const PORT = Number(process.env.PORT || 3000); // un seul port pour API + Next
+const LOCAL_SPLIT = process.env.LOCAL_SPLIT === '1';
+const PORT = Number(process.env.PORT || 3000); // un seul port Next + API
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'streamv11-cookie-secret';
 const SESSION_COOKIE = 'stream_session';
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -36,50 +37,38 @@ const Role = { ADMIN: 'admin', USER: 'user' };
 
 const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 1); // cookies Secure derrière proxy (Render/Fly/etc.)
+app.set('trust proxy', 1); // cookies Secure derrière proxy
 
-// Helmet (CSP compatible Next + HLS + dev websockets)
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      useDefaults: true,
-      directives: {
-        "default-src": ["'self'"],
-        "img-src": ["'self'", "data:", "https:", "blob:"],
-        "media-src": ["'self'", "https:", "blob:"],
-        "script-src": DEV
-          ? ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"]
-          : ["'self'", "'unsafe-inline'", "blob:"],
-        "style-src": ["'self'", "'unsafe-inline'"],
-        "connect-src": ["'self'", "https:", "ws:", "wss:"],
-        "worker-src": ["'self'", "blob:"],
-        "frame-ancestors": ["'none'"]
-      }
-    },
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
-  })
-);
+// Helmet (CSP compatible Next/HLS)
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "img-src": ["'self'", "data:", "https:", "blob:"],
+      "media-src": ["'self'", "https:", "blob:"],
+      "script-src": DEV ? ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:"] : ["'self'", "'unsafe-inline'", "blob:"],
+      "style-src": ["'self'", "'unsafe-inline'"],
+      "connect-src": ["'self'", "https:", "ws:", "wss:"],
+      "worker-src": ["'self'", "blob:"],
+      "frame-ancestors": ["'none'"]
+    }
+  },
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
-// CORS (ouvert)
-app.use(
-  cors({
-    origin: (_origin, cb) => cb(null, true),
-    credentials: true
-  })
-);
+// CORS seulement pour le dev split (frontend:3000, api:3001)
+if (DEV && LOCAL_SPLIT) {
+  app.use(cors({ origin: (_o, cb) => cb(null, true), credentials: true }));
+}
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser(COOKIE_SECRET));
 
 // Rate limit admin
-const adminLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false
-});
+const adminLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
-// ---- Zod Schemas
+// ---------- Zod Schemas ----------
 const userSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_-]+$/),
   password: z.string().min(8),
@@ -92,32 +81,29 @@ const userUpdateSchema = z.object({
   role: z.enum([Role.ADMIN, Role.USER]).optional()
 });
 
-// subtitle: accepte "fr:https://...", objets {lang,url}, et chemins relatifs
+// Sous-titres: accepte "fr:https://", "fr:/path.vtt", objet {lang,url}
 const subtitleSchema = z.preprocess((val) => {
   if (typeof val === 'string') {
     const i = val.indexOf(':');
     if (i > 0) {
       const lang = val.slice(0, i).trim();
       const raw = val.slice(i + 1).trim();
+      // => on garde relatif si commence par "/", sinon http(s)
       const url = /^https?:\/\//i.test(raw)
         ? raw
-        : `http://localhost:${PORT}${raw.startsWith('/') ? '' : '/'}${raw}`;
+        : `/${raw.replace(/^\/+/, '')}`;
       return { lang, url };
     }
   }
   return val;
 }, z.object({
   lang: z.string().min(2).max(8),
-  url: z.string().url()
+  url: z.string().refine(u => /^https?:\/\//i.test(u) || u.startsWith('/'), 'url must be http(s) or /path')
 }));
 
-// helper: autoriser string unique ou liste séparée par lignes/virgules
 const subtitlesField = z.preprocess((val) => {
   if (typeof val === 'string') {
-    return val
-      .split(/\r?\n|,/)
-      .map(s => s.trim())
-      .filter(Boolean);
+    return val.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
   }
   return val;
 }, z.array(subtitleSchema));
@@ -198,7 +184,7 @@ const playSchema = z.object({
   type: z.enum(['movie', 'series'])
 });
 
-// ---- Sessions
+// ---------- Sessions ----------
 const sessions = new Map();
 
 async function ensureDirectories() {
@@ -213,9 +199,9 @@ async function readJSON(filePath, defaultValue) {
   try {
     const data = await fsp.readFile(filePath, 'utf-8');
     return JSON.parse(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') return defaultValue;
-    throw error;
+  } catch (e) {
+    if (e.code === 'ENOENT') return defaultValue;
+    throw e;
   }
 }
 
@@ -247,9 +233,7 @@ async function appendAudit(user, action, target, details) {
 
 async function loadSessions() {
   const data = await readJSON(SESSION_FILE, []);
-  if (Array.isArray(data)) {
-    for (const s of data) if (s && typeof s.id === 'string') sessions.set(s.id, s);
-  }
+  if (Array.isArray(data)) for (const s of data) if (s && typeof s.id === 'string') sessions.set(s.id, s);
 }
 async function persistSessions() { await writeJSON(SESSION_FILE, Array.from(sessions.values())); }
 function cleanExpiredSessions() {
@@ -393,10 +377,7 @@ async function incrementSeriesViews(slug) {
 const VIEWS_COOKIE = 'stream_viewed';
 function parseViewCookie(raw) {
   if (!raw) return [];
-  try {
-    const p = JSON.parse(raw);
-    return Array.isArray(p) ? p : [];
-  } catch { return []; }
+  try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; }
 }
 
 async function registerView(req, res, type, contentId) {
@@ -429,7 +410,6 @@ function handleError(res, error) {
 }
 
 // ---------- ROUTES API ----------
-
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // AUTH
@@ -491,14 +471,7 @@ app.post('/api/users', requireAuth(Role.ADMIN), requireCsrf, async (req, res) =>
 
     const passwordHash = await bcrypt.hash(parsed.password, 12);
     const now = new Date().toISOString();
-    const newUser = {
-      username: parsed.username,
-      passwordHash,
-      role: parsed.role,
-      active: true,
-      createdAt: now,
-      updatedAt: now
-    };
+    const newUser = { username: parsed.username, passwordHash, role: parsed.role, active: true, createdAt: now, updatedAt: now };
     const targetFile = parsed.role === Role.ADMIN ? path.join(USERS_DIR, 'admin.json') : path.join(USERS_DIR, 'users.json');
     const data = await readJSON(targetFile, { users: [] });
     data.users.push(newUser);
@@ -539,10 +512,7 @@ app.delete('/api/users/:username', requireAuth(Role.ADMIN), requireCsrf, async (
 });
 
 // MOVIES
-app.get('/api/movies', requireAuth(), async (req, res) => {
-  const movies = await getMovies();
-  res.json(movies);
-});
+app.get('/api/movies', requireAuth(), async (_req, res) => res.json(await getMovies()));
 app.post('/api/movies', requireAuth(Role.ADMIN), requireCsrf, async (req, res) => {
   try {
     const movie = sanitizeMoviePayload(req.body);
@@ -581,10 +551,7 @@ app.delete('/api/movies/:id', requireAuth(Role.ADMIN), requireCsrf, async (req, 
 });
 
 // SERIES
-app.get('/api/series', requireAuth(), async (req, res) => {
-  const seriesList = await listSeries();
-  res.json(seriesList);
-});
+app.get('/api/series', requireAuth(), async (_req, res) => res.json(await listSeries()));
 app.post('/api/series', requireAuth(Role.ADMIN), requireCsrf, async (req, res) => {
   try {
     const parsed = seriesSchema.parse(req.body);
@@ -666,10 +633,7 @@ app.delete('/api/series/:slug', requireAuth(Role.ADMIN), requireCsrf, async (req
 });
 
 // CATEGORIES
-app.get('/api/categories', requireAuth(), async (req, res) => {
-  const categories = await getCategories();
-  res.json(categories);
-});
+app.get('/api/categories', requireAuth(), async (_req, res) => res.json(await getCategories()));
 app.post('/api/categories', requireAuth(Role.ADMIN), requireCsrf, adminLimiter, async (req, res) => {
   try {
     const category = sanitizeCategoryPayload(req.body);
@@ -742,22 +706,17 @@ app.post('/api/history', requireAuth(), requireCsrf, async (req, res) => {
 });
 
 // 404 API
-app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
+app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
-// ---------- INTÉGRATION NEXT.JS (après toutes les routes /api) ----------
-const nextApp = nextjs({ dev: DEV, dir: __dirname }); // App Router support
+// ---------- Next.js ----------
+const nextApp = nextjs({ dev: DEV, dir: __dirname });
 const handle = nextApp.getRequestHandler();
 
-// BOOT
 (async () => {
   await ensureDirectories();
   await loadSessions();
   await nextApp.prepare();
 
-  // (Optionnel) servir /data en lecture si tu en as besoin côté client
-  // app.use('/data', express.static(DATA_DIR, { fallthrough: true }));
-
-  // Next gère tout le reste
   app.all('*', (req, res) => handle(req, res));
 
   app.listen(PORT, () => {
@@ -765,5 +724,4 @@ const handle = nextApp.getRequestHandler();
   });
 })();
 
-// Export pour tests éventuels
 module.exports = app;
