@@ -1,16 +1,9 @@
 [
   {
-    "id": "2c90dd11-e782-44e8-b5c4-5958e3a64922",
+    "id": "f7c846a0-e9aa-4558-9007-6419a6a7c810",
     "username": "admin",
     "role": "admin",
-    "csrfToken": "b10af03943857978ebf2db2a21bf5e63f72f3c95aa3cb9f55b182439971ae56c",
-    "expiresAt": 1763199750963
-  },
-  {
-    "id": "7e497319-9731-4f4c-ae8e-17e325f52772",
-    "username": "admin",
-    "role": "admin",
-    "csrfToken": "9ad398f470d74adfe61264768cd5a74a6966bef016b50ad2267cf4774963fe4c",
-    "expiresAt": 1763462880029
+    "csrfToken": "2e01f1a993e84315d6044005d261db4951a7df2c7ea4bc467533a8e67136474f",
+    "expiresAt": 1763463660995
   }
 ]

@@ -88,10 +88,7 @@ const subtitleSchema = z.preprocess((val) => {
     if (i > 0) {
       const lang = val.slice(0, i).trim();
       const raw = val.slice(i + 1).trim();
-      // => on garde relatif si commence par "/", sinon http(s)
-      const url = /^https?:\/\//i.test(raw)
-        ? raw
-        : `/${raw.replace(/^\/+/, '')}`;
+      const url = /^https?:\/\//i.test(raw) ? raw : `/${raw.replace(/^\/+/, '')}`;
       return { lang, url };
     }
   }
@@ -102,9 +99,7 @@ const subtitleSchema = z.preprocess((val) => {
 }));
 
 const subtitlesField = z.preprocess((val) => {
-  if (typeof val === 'string') {
-    return val.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
-  }
+  if (typeof val === 'string') return val.split(/\r?\n|,/).map(s => s.trim()).filter(Boolean);
   return val;
 }, z.array(subtitleSchema));
 
@@ -205,6 +200,20 @@ async function readJSON(filePath, defaultValue) {
   }
 }
 
+// --- NORMALISATION TOLÉRANTE --------------------------------
+function normalizeUsersFile(x) {
+  // {users:[...]}, [...] ou autre
+  if (x && Array.isArray(x.users)) return x.users;
+  if (Array.isArray(x)) return x;
+  return [];
+}
+function normalizeAdminFile(x) {
+  // {users:[...]}, {username:...}, ou autre
+  if (x && Array.isArray(x.users)) return x.users;
+  if (x && typeof x === 'object' && x.username) return [x];
+  return [];
+}
+
 async function writeFileLocked(filePath, content) {
   const dir = path.dirname(filePath);
   await fsp.mkdir(dir, { recursive: true });
@@ -241,21 +250,31 @@ function cleanExpiredSessions() {
   for (const [id, s] of sessions.entries()) if (s.expiresAt <= now) sessions.delete(id);
 }
 
+// --- USERS (FIX) ---------------------------------------------
 async function getAllUsers() {
-  const admins = await readJSON(path.join(USERS_DIR, 'admin.json'), { users: [] });
-  const users = await readJSON(path.join(USERS_DIR, 'users.json'), { users: [] });
-  return [...admins.users, ...users.users];
+  const adminsRaw = await readJSON(path.join(USERS_DIR, 'admin.json'), null);
+  const usersRaw  = await readJSON(path.join(USERS_DIR, 'users.json'), null);
+  const admins = normalizeAdminFile(adminsRaw);
+  const users  = normalizeUsersFile(usersRaw);
+  return [...admins, ...users];
 }
 
 async function findUser(username) {
   const adminsPath = path.join(USERS_DIR, 'admin.json');
-  const usersPath = path.join(USERS_DIR, 'users.json');
-  const admins = await readJSON(adminsPath, { users: [] });
-  const users = await readJSON(usersPath, { users: [] });
-  const adminUser = admins.users.find(u => u.username === username);
-  if (adminUser) return { user: adminUser, file: adminsPath, collection: admins.users };
-  const regularUser = users.users.find(u => u.username === username);
-  if (regularUser) return { user: regularUser, file: usersPath, collection: users.users };
+  const usersPath  = path.join(USERS_DIR, 'users.json');
+
+  const adminsRaw = await readJSON(adminsPath, null);
+  const usersRaw  = await readJSON(usersPath, null);
+
+  const admins = normalizeAdminFile(adminsRaw);
+  const users  = normalizeUsersFile(usersRaw);
+
+  const adminUser = admins.find(u => u && u.username === username);
+  if (adminUser) return { user: adminUser, file: adminsPath, collection: admins };
+
+  const regularUser = users.find(u => u && u.username === username);
+  if (regularUser) return { user: regularUser, file: usersPath, collection: users };
+
   return null;
 }
 
@@ -417,10 +436,13 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const schema = z.object({ username: z.string().min(1), password: z.string().min(1) });
     const { username, password } = schema.parse(req.body);
+
     const record = await findUser(username);
     if (!record) return res.status(401).json({ error: 'Invalid credentials' });
+
     const { user } = record;
-    if (!user.active) return res.status(403).json({ error: 'User deactivated' });
+    if (user.active === false) return res.status(403).json({ error: 'User deactivated' });
+
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -474,8 +496,9 @@ app.post('/api/users', requireAuth(Role.ADMIN), requireCsrf, async (req, res) =>
     const newUser = { username: parsed.username, passwordHash, role: parsed.role, active: true, createdAt: now, updatedAt: now };
     const targetFile = parsed.role === Role.ADMIN ? path.join(USERS_DIR, 'admin.json') : path.join(USERS_DIR, 'users.json');
     const data = await readJSON(targetFile, { users: [] });
-    data.users.push(newUser);
-    await saveUserRecord(targetFile, data.users);
+    const arr = normalizeUsersFile(data);
+    arr.push(newUser);
+    await saveUserRecord(targetFile, arr);
     await appendAudit(req.user.username, 'create_user', newUser.username, `Role ${newUser.role}`);
     res.status(201).json({ username: newUser.username, role: newUser.role, active: newUser.active, createdAt: newUser.createdAt });
   } catch (e) { handleError(res, e); }
@@ -487,11 +510,13 @@ app.put('/api/users/:username', requireAuth(Role.ADMIN), requireCsrf, async (req
     const updates = userUpdateSchema.parse(req.body);
     const record = await findUser(username);
     if (!record) return res.status(404).json({ error: 'User not found' });
+
     const { user, file, collection } = record;
     if (updates.password) user.passwordHash = await bcrypt.hash(updates.password, 12);
     if (typeof updates.active === 'boolean') user.active = updates.active;
     if (updates.role && updates.role !== user.role) user.role = updates.role;
     user.updatedAt = new Date().toISOString();
+
     await saveUserRecord(file, collection);
     await appendAudit(req.user.username, 'update_user', username, JSON.stringify(updates));
     res.json({ username: user.username, role: user.role, active: user.active, updatedAt: user.updatedAt });
@@ -503,6 +528,7 @@ app.delete('/api/users/:username', requireAuth(Role.ADMIN), requireCsrf, async (
     const { username } = req.params;
     const record = await findUser(username);
     if (!record) return res.status(404).json({ error: 'User not found' });
+
     const { file, collection } = record;
     const updated = collection.filter(u => u.username !== username);
     await saveUserRecord(file, updated);

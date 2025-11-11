@@ -2,7 +2,7 @@
   "users": [
     {
       "username": "demo",
-      "passwordHash": "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5HN82S38WC2c0AKGGU8wBeSa.BIRa",
+      "passwordHash": "$2b$10$3oe.r613HnFvypFdqorR7eIU.56vMu.fSdyU4nvqBgCKNTHfHlaxq",
       "role": "user",
       "active": true,
       "createdAt": "2024-01-01T00:00:00.000Z",
